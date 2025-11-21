@@ -1,0 +1,22 @@
+<div class="min-h-screen bg-slate-950 text-slate-50">
+  @let currentVideo = selectedVideo();
+  <div
+    class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-10 lg:flex-row"
+  >
+    <section class="flex-1 lg:w-7/12 xl:w-8/12">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm uppercase tracking-[0.2em] text-slate-500">
+            Now Playing
+          </p>
+          <h1 class="text-2xl font-bold text-slate-50">
+            {{ currentVideo?.name ?? "Select a video" }}
+          </h1>
+        </div>
+      </div>
+      <div class="mt-4">
+        <app-video-player (videoUploaded)="onVideoUploaded($event)"></app-video-player>
+      </div>
+    </section>
+  </div>
+</div>
