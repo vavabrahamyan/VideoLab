@@ -1,10 +1,11 @@
 {
   "name": "videolab",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "postbuild": "node scripts/flatten-docs.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
