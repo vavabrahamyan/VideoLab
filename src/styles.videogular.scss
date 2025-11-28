@@ -38,13 +38,6 @@ vg-player .player-actions .action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 9999px;
-  background: rgba(15, 23, 42, 0.8);
-  color: #e2e8f0;
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  box-shadow: 0 10px 25px -12px rgba(15, 23, 42, 0.8);
   transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
@@ -58,7 +51,85 @@ vg-player .player-actions .action-btn--danger {
 }
 
 vg-player vg-controls.hide ~ .player-actions {
-  opacity: 0;
   transform: translateY(-18px);
   pointer-events: none;
+}
+
+vg-player .skip-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 0 12%;
+  pointer-events: none;
+  z-index: 12;
+}
+
+vg-player .skip-overlay--active {
+  pointer-events: auto;
+}
+
+vg-player .skip-overlay__badge {
+  align-self: center;
+  display: inline-flex;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 9999px;
+  color: #e2e8f0;
+  opacity: 0;
+  transform: translateY(6px) scale(0.94);
+  animation: skip-pop 0.7s ease forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+vg-player .skip-overlay__badge--forward {
+  margin-left: auto;
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+vg-player .skip-overlay__badge--active {
+  opacity: 1;
+  transform: translateY(0) scale(1.02);
+}
+
+vg-player .skip-overlay__badge svg {
+  filter: drop-shadow(0 6px 16px rgba(56, 189, 248, 0.25));
+}
+
+vg-player .skip-overlay__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  color: #e2e8f0;
+}
+
+vg-player .skip-overlay__label {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+vg-player .skip-overlay__sub {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+@keyframes skip-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
 }

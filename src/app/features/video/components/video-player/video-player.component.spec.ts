@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { VideoPlayerComponent } from './video-player.component';
 
 describe('VideoPlayerComponent', () => {
@@ -115,4 +115,106 @@ describe('VideoPlayerComponent', () => {
     expect(preventDefault).toHaveBeenCalled();
     expect(pausedState).toBeTrue();
   });
+
+  it('toggles play/pause on single click only after the delay window', fakeAsync(() => {
+    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
+    let pausedState = true;
+
+    const mediaEl = {
+      get paused() {
+        return pausedState;
+      },
+      play: jasmine.createSpy('play').and.callFake(() => {
+        pausedState = false;
+      }),
+      pause: jasmine.createSpy('pause').and.callFake(() => {
+        pausedState = true;
+      }),
+    } as any as HTMLVideoElement;
+
+    component['media'] = { nativeElement: mediaEl } as any;
+
+    component.onVideoClick();
+    tick(clickDelay - 1);
+    expect(mediaEl.play).not.toHaveBeenCalled();
+
+    tick(1);
+    expect(mediaEl.play).toHaveBeenCalledTimes(1);
+    expect(pausedState).toBeFalse();
+  }));
+
+  it('seeks forward on right-side double click without toggling play/pause', fakeAsync(() => {
+    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
+    let pausedState = true;
+
+    const mediaEl = {
+      get paused() {
+        return pausedState;
+      },
+      play: jasmine.createSpy('play').and.callFake(() => {
+        pausedState = false;
+      }),
+      pause: jasmine.createSpy('pause').and.callFake(() => {
+        pausedState = true;
+      }),
+      getBoundingClientRect: () =>
+        ({
+          left: 0,
+          width: 100,
+        }) as DOMRect,
+    } as any as HTMLVideoElement;
+
+    component['media'] = { nativeElement: mediaEl } as any;
+
+    const forwardSpy = spyOn(component, 'seekForward');
+    const toggleSpy = spyOn(component, 'togglePlayPause').and.callThrough();
+
+    component.onVideoClick();
+    component.onVideoDoubleClick(new MouseEvent('dblclick', { clientX: 90 }));
+
+    tick(clickDelay + 20);
+
+    expect(forwardSpy).toHaveBeenCalledTimes(1);
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(mediaEl.play).not.toHaveBeenCalled();
+    expect(mediaEl.pause).not.toHaveBeenCalled();
+  }));
+
+  it('reverts a single-click toggle when the second click arrives late but in a skip zone', fakeAsync(() => {
+    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
+    let pausedState = true;
+
+    const mediaEl = {
+      get paused() {
+        return pausedState;
+      },
+      play: jasmine.createSpy('play').and.callFake(() => {
+        pausedState = false;
+      }),
+      pause: jasmine.createSpy('pause').and.callFake(() => {
+        pausedState = true;
+      }),
+      getBoundingClientRect: () =>
+        ({
+          left: 0,
+          width: 100,
+        }) as DOMRect,
+    } as any as HTMLVideoElement;
+
+    component['media'] = { nativeElement: mediaEl } as any;
+
+    const backwardSpy = spyOn(component, 'seekBackward');
+
+    component.onVideoClick();
+    tick(clickDelay + 10);
+
+    expect(mediaEl.play).toHaveBeenCalled();
+    expect(pausedState).toBeFalse();
+
+    component.onVideoDoubleClick({ clientX: 5 } as MouseEvent);
+
+    expect(backwardSpy).toHaveBeenCalledTimes(1);
+    expect(mediaEl.pause).toHaveBeenCalled();
+    expect(pausedState).toBeTrue();
+  }));
 });

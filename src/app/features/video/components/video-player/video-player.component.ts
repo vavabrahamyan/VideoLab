@@ -5,6 +5,7 @@ import {
   effect,
   ElementRef,
   HostListener,
+  OnDestroy,
   input,
   output,
   signal,
@@ -29,7 +30,7 @@ import { VgOverlayPlayModule } from '@videogular/ngx-videogular/overlay-play';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-player.component.html',
 })
-export class VideoPlayerComponent {
+export class VideoPlayerComponent implements OnDestroy {
   readonly videoUrl = input<string | null>(null);
   videoUploaded = output<File>();
   readonly uploadedUrl = signal<string | null>(null);
@@ -37,7 +38,17 @@ export class VideoPlayerComponent {
   readonly effectiveVideoUrl = computed(
     () => this.uploadedUrl() ?? this.videoUrl()
   );
+  readonly seekOverlay = signal<
+    { direction: 'forward' | 'backward'; token: number } | null
+  >(null);
   @ViewChild('media') media?: ElementRef<HTMLVideoElement>;
+  private hideSeekOverlayTimeout?: ReturnType<typeof setTimeout>;
+  private seekOverlayToken = 0;
+  private clickTimeout?: ReturnType<typeof setTimeout>;
+  private readonly SEEK_STEP_SECONDS = 10;
+  private readonly CLICK_DELAY_MS = 250;
+  private readonly SEEK_ZONE_RATIO = 0.25;
+  private lastClickPlayState?: { wasPaused: boolean; timestamp: number };
 
   constructor() {
     effect((onCleanup) => {
@@ -46,6 +57,15 @@ export class VideoPlayerComponent {
 
       onCleanup(() => URL.revokeObjectURL(url));
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.hideSeekOverlayTimeout) {
+      clearTimeout(this.hideSeekOverlayTimeout);
+    }
+    if (this.clickTimeout) {
+      clearTimeout(this.clickTimeout);
+    }
   }
 
   onFileSelected(event: Event): void {
@@ -71,6 +91,18 @@ export class VideoPlayerComponent {
     if (event.code === 'Space' || event.key === ' ') {
       event.preventDefault();
       this.togglePlayPause();
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'l' || event.key === 'L') {
+      event.preventDefault();
+      this.seekForward();
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'j' || event.key === 'J') {
+      event.preventDefault();
+      this.seekBackward();
       return;
     }
 
@@ -120,6 +152,60 @@ export class VideoPlayerComponent {
     mediaEl.muted = !mediaEl.muted;
   }
 
+  onVideoClick(): void {
+    if (this.clickTimeout) return;
+
+    this.clickTimeout = setTimeout(() => {
+      const mediaEl = this.media?.nativeElement;
+      if (!mediaEl) {
+        this.clickTimeout = undefined;
+        return;
+      }
+
+      const wasPaused = mediaEl.paused;
+      this.togglePlayPause();
+      this.lastClickPlayState = { wasPaused, timestamp: Date.now() };
+      this.clickTimeout = undefined;
+    }, this.CLICK_DELAY_MS);
+  }
+
+  onVideoDoubleClick(event: MouseEvent): void {
+    const mediaEl = this.media?.nativeElement;
+    if (!mediaEl) return;
+
+    if (this.clickTimeout) {
+      clearTimeout(this.clickTimeout);
+      this.clickTimeout = undefined;
+    } else if (
+      this.lastClickPlayState &&
+      Date.now() - this.lastClickPlayState.timestamp < this.CLICK_DELAY_MS * 2
+    ) {
+      this.lastClickPlayState.wasPaused ? mediaEl.pause() : mediaEl.play();
+    }
+    this.lastClickPlayState = undefined;
+
+    const rect = mediaEl.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const skipZoneWidth = rect.width * this.SEEK_ZONE_RATIO;
+
+    if (clickX <= skipZoneWidth) {
+      this.seekBackward();
+      return;
+    }
+
+    if (clickX >= rect.width - skipZoneWidth) {
+      this.seekForward();
+    }
+  }
+
+  seekForward(): void {
+    this.seekBy(this.SEEK_STEP_SECONDS);
+  }
+
+  seekBackward(): void {
+    this.seekBy(-this.SEEK_STEP_SECONDS);
+  }
+
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragOver.set(false);
@@ -134,5 +220,33 @@ export class VideoPlayerComponent {
 
     this.uploadedUrl.set(URL.createObjectURL(file));
     this.videoUploaded.emit(file);
+  }
+
+  private seekBy(delta: number): void {
+    const mediaEl = this.media?.nativeElement;
+    if (!mediaEl || !isFinite(mediaEl.duration) || mediaEl.duration <= 0) return;
+
+    const target = Math.min(
+      mediaEl.duration,
+      Math.max(0, mediaEl.currentTime + delta)
+    );
+    mediaEl.currentTime = target;
+    this.showSeekOverlay(delta >= 0 ? 'forward' : 'backward');
+  }
+
+  private showSeekOverlay(direction: 'forward' | 'backward'): void {
+    const token = ++this.seekOverlayToken;
+    this.seekOverlay.set({ direction, token });
+
+    if (this.hideSeekOverlayTimeout) {
+      clearTimeout(this.hideSeekOverlayTimeout);
+    }
+
+    this.hideSeekOverlayTimeout = setTimeout(() => {
+      const current = this.seekOverlay();
+      if (current?.token === token) {
+        this.seekOverlay.set(null);
+      }
+    }, 650);
   }
 }
