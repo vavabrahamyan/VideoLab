@@ -41,6 +41,10 @@ export class VideoPlayerComponent implements OnDestroy {
   readonly seekOverlay = signal<
     { direction: 'forward' | 'backward'; token: number } | null
   >(null);
+  readonly seekOverlayList = computed(() => {
+    const overlay = this.seekOverlay();
+    return overlay ? [overlay] : [];
+  });
   @ViewChild('media') media?: ElementRef<HTMLVideoElement>;
   private hideSeekOverlayTimeout?: ReturnType<typeof setTimeout>;
   private seekOverlayToken = 0;

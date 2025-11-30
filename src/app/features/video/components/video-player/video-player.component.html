@@ -32,35 +32,37 @@
             <vg-overlay-play></vg-overlay-play>
             <vg-buffering></vg-buffering>
 
-            @let activeOverlay = seekOverlay();
-            @if (activeOverlay) {
+            @for (overlay of seekOverlayList(); track overlay.token) {
               <div class="skip-overlay skip-overlay--active">
-                @if(activeOverlay?.direction === 'backward'){<button
-                  type="button"
-                  class="skip-overlay__badge skip-overlay__badge--back skip-overlay__badge--active"
-                  (click)="seekBackward()"
-                >
-                  <div class="skip-overlay__text">
-                    <span class="skip-overlay__label">-10</span>
-                  </div>
-                </button>}
-                @if(activeOverlay?.direction === 'forward'){
-                <button
-                  type="button"
-                  class="skip-overlay__badge skip-overlay__badge--forward skip-overlay__badge--active"
-                  (click)="seekForward()"
-                >
-                  <div class="skip-overlay__text">
-                    <span class="skip-overlay__label">+10</span>
-                  </div>
-                </button>}
+                @if (overlay.direction === 'backward') {
+                  <button
+                    type="button"
+                    class="skip-overlay__badge skip-overlay__badge--back skip-overlay__badge--active"
+                    (click)="seekBackward()"
+                  >
+                    <div class="skip-overlay__text">
+                      <span class="skip-overlay__label">-10</span>
+                    </div>
+                  </button>
+                }
+                @if (overlay.direction === 'forward') {
+                  <button
+                    type="button"
+                    class="skip-overlay__badge skip-overlay__badge--forward skip-overlay__badge--active"
+                    (click)="seekForward()"
+                  >
+                    <div class="skip-overlay__text">
+                      <span class="skip-overlay__label">+10</span>
+                    </div>
+                  </button>
+                }
               </div>
             }
 
             <vg-controls
               vgFor="videogular-player"
               [vgAutohide]="true"
-              [vgAutohideTime]="2000"
+              [vgAutohideTime]="2"
               class="flex flex-wrap items-center gap-2 bg-slate-950/80 px-3 text-slate-100"
             >
               <vg-play-pause vgFor="videogular-player"></vg-play-pause>
