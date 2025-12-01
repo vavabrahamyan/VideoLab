@@ -96,17 +96,6 @@
               <button
                 type="button"
                 class="action-btn"
-                aria-label="Back 10 seconds"
-                title="Back 10 seconds"
-                (click)="seekBackward()"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                  <path d="M12 5v3.18C8.5 8.66 6 11.4 6 14.75 6 18.22 8.78 21 12.25 21s6.25-2.78 6.25-6.25h-2a4.25 4.25 0 0 1-8.5 0c0-2.2 1.65-3.98 3.75-4.22V14l5-4-5-4Z"></path>
-                </svg>
-              </button>
-              <button
-                type="button"
-                class="action-btn"
                 [attr.aria-label]="media?.muted ? 'Unmute' : 'Mute'"
                 [title]="media?.muted ? 'Unmute' : 'Mute'"
                 (click)="toggleMute()"
@@ -127,17 +116,6 @@
             </div>
 
             <div class="player-actions player-actions--right">
-              <button
-                type="button"
-                class="action-btn"
-                aria-label="Forward 10 seconds"
-                title="Forward 10 seconds"
-                (click)="seekForward()"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                  <path d="M12 5v3.18c3.5.48 6 3.22 6 6.57 0 3.47-2.78 6.25-6.25 6.25S5.5 18.22 5.5 14.75h2a4.25 4.25 0 0 0 8.5 0c0-2.2-1.65-3.98-3.75-4.22V14l-5-4 5-4Z"></path>
-                </svg>
-              </button>
               <button
                 type="button"
                 class="action-btn"

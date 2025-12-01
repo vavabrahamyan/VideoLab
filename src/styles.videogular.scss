@@ -1,14 +1,49 @@
 @import '@videogular/ngx-videogular/fonts/videogular.css';
 
+/* Design tokens for Videogular player */
+vg-player {
+  /* Spacing scale */
+  --vg-spacing-xs: 0.25rem;
+  --vg-spacing-sm: 0.5rem;
+  --vg-spacing-md: 0.75rem;
+  --vg-spacing-lg: 1rem;
+
+  /* Sizes */
+  --vg-control-size: 2.5rem;
+  --vg-controls-hide-offset-y: 0.875rem;
+  --vg-actions-hide-offset-y: 6rem;
+
+  /* Typography / text */
+  --vg-label-font-size: 2rem;
+  --vg-sub-font-size: 0.8rem;
+
+  /* Colors */
+  --vg-color-text-light: #e2e8f0;
+  --vg-color-danger-bg: rgba(190, 24, 93, 0.8);
+  --vg-color-danger-border: rgba(159, 18, 57, 0.8);
+
+  /* Transitions & animations */
+  --vg-duration-fast: 0.2s;
+  --vg-duration-normal: 0.3s;
+  --vg-duration-slow: 0.35s;
+  --vg-ease-default: ease;
+
+  /* Shadows */
+  --vg-shadow-skip: 0 0.375rem 1rem rgba(56, 189, 248, 0.25);
+}
+
 /* Fade/slide Videogular controls out when autohide is active */
 vg-player vg-controls {
   transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease, bottom 0.35s ease;
+  transition:
+    opacity var(--vg-duration-normal) var(--vg-ease-default),
+    transform var(--vg-duration-normal) var(--vg-ease-default),
+    bottom var(--vg-duration-slow) var(--vg-ease-default);
 }
 
 vg-player vg-controls.hide {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translateY(var(--vg-controls-hide-offset-y));
   pointer-events: none;
 }
 
@@ -16,11 +51,13 @@ vg-player .player-actions {
   position: absolute;
   top: 0;
   display: flex;
-  gap: 0.5rem;
-  padding: 0.65rem;
+  gap: var(--vg-spacing-sm);
+  padding: var(--vg-spacing-md);
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity var(--vg-duration-normal) var(--vg-ease-default),
+    transform var(--vg-duration-normal) var(--vg-ease-default);
   pointer-events: none;
   z-index: 20;
 }
@@ -38,7 +75,13 @@ vg-player .player-actions .action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  width: var(--vg-control-size);
+  height: var(--vg-control-size);
+  border-radius: 50%;
+  transition:
+    transform var(--vg-duration-fast) var(--vg-ease-default),
+    background var(--vg-duration-fast) var(--vg-ease-default),
+    color var(--vg-duration-fast) var(--vg-ease-default);
 }
 
 vg-player .player-actions .action-btn:hover {
@@ -46,12 +89,12 @@ vg-player .player-actions .action-btn:hover {
 }
 
 vg-player .player-actions .action-btn--danger {
-  background: rgba(190, 24, 93, 0.8);
-  border-color: rgba(159, 18, 57, 0.8);
+  background: var(--vg-color-danger-bg);
+  border-color: var(--vg-color-danger-border);
 }
 
 vg-player vg-controls.hide ~ .player-actions {
-  transform: translateY(-18px);
+  transform: translateY(calc(-1 * var(--vg-actions-hide-offset-y)));
   pointer-events: none;
 }
 
@@ -71,15 +114,18 @@ vg-player .skip-overlay--active {
 vg-player .skip-overlay__badge {
   align-self: center;
   display: inline-flex;
-  gap: 0.65rem;
+  gap: var(--vg-spacing-md);
   align-items: center;
-  padding: 0.85rem 1rem;
-  border-radius: 9999px;
-  color: #e2e8f0;
+  padding: var(--vg-spacing-md) var(--vg-spacing-lg);
+  border-radius: 50%;
+  color: var(--vg-color-text-light);
   opacity: 0;
-  transform: translateY(6px) scale(0.94);
-  animation: skip-pop 0.7s ease forwards;
-  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transform: translateY(var(--vg-spacing-sm)) scale(0.94);
+  animation: skip-pop 0.7s var(--vg-ease-default) forwards;
+  transition:
+    opacity var(--vg-duration-fast) var(--vg-ease-default),
+    transform var(--vg-duration-fast) var(--vg-ease-default),
+    box-shadow var(--vg-duration-fast) var(--vg-ease-default);
 }
 
 vg-player .skip-overlay__badge--forward {
@@ -94,31 +140,31 @@ vg-player .skip-overlay__badge--active {
 }
 
 vg-player .skip-overlay__badge svg {
-  filter: drop-shadow(0 6px 16px rgba(56, 189, 248, 0.25));
+  filter: drop-shadow(var(--vg-shadow-skip));
 }
 
 vg-player .skip-overlay__text {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
-  color: #e2e8f0;
+  color: var(--vg-color-text-light);
 }
 
 vg-player .skip-overlay__label {
-  font-size: 2rem;
+  font-size: var(--vg-label-font-size);
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 
 vg-player .skip-overlay__sub {
-  font-size: 0.8rem;
+  font-size: var(--vg-sub-font-size);
   opacity: 0.85;
 }
 
 @keyframes skip-pop {
   0% {
     opacity: 0;
-    transform: translateY(6px) scale(0.92);
+    transform: translateY(var(--vg-spacing-sm)) scale(0.92);
   }
   22% {
     opacity: 1;
@@ -130,6 +176,6 @@ vg-player .skip-overlay__sub {
   }
   100% {
     opacity: 0;
-    transform: translateY(-4px) scale(0.97);
+    transform: translateY(calc(-1 * var(--vg-spacing-xs))) scale(0.97);
   }
 }
