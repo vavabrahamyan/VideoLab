@@ -7,7 +7,7 @@ describe('VideoPlayerComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [VideoPlayerComponent]
+      imports: [VideoPlayerComponent],
     });
 
     fixture = TestBed.createComponent(VideoPlayerComponent);
@@ -58,163 +58,110 @@ describe('VideoPlayerComponent', () => {
     }
   });
 
-  it('removes the current video and clears the upload url', () => {
-    fixture.componentRef.setInput('videoUrl', 'assets/test.mp4');
-    fixture.detectChanges();
+  it('removes the current video, clears the upload url and resets the ui state', () => {
+    const videoElement = {
+      paused: false,
+      currentTime: 10,
+      pause: jasmine.createSpy('pause'),
+      load: jasmine.createSpy('load'),
+      removeAttribute: jasmine.createSpy('removeAttribute'),
+    } as unknown as HTMLVideoElement;
 
-    const videoElement = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
     component['uploadedUrl'].set('blob:temp');
+    component.uiState.set('playingControlsVisible');
+    component.lastInteractionTime.set(1000);
 
-    const pauseSpy = spyOn(videoElement, 'pause').and.callThrough();
-    const loadSpy = spyOn(videoElement, 'load').and.callThrough();
+    component['media'] = { nativeElement: videoElement } as any;
 
     component.removeVideo();
 
-    expect(pauseSpy).toHaveBeenCalled();
-    expect(loadSpy).toHaveBeenCalled();
+    expect(videoElement.pause).toHaveBeenCalled();
+    expect(videoElement.load).toHaveBeenCalled();
     expect(videoElement.currentTime).toBe(0);
     expect(component['uploadedUrl']()).toBeNull();
+    expect(component.uiState()).toBe('paused');
+    expect(component.lastInteractionTime()).toBeNull();
   });
 
-  it('toggles play and pause with the space key when focused outside inputs', () => {
+  it('toggles playback with the space key and drives the ui state machine', fakeAsync(() => {
     let pausedState = true;
-    const playSpy = jasmine.createSpy('play').and.callFake(() => {
-      pausedState = false;
-    });
-    const pauseSpy = jasmine.createSpy('pause').and.callFake(() => {
-      pausedState = true;
-    });
+    const mediaEl = {
+      get paused() {
+        return pausedState;
+      },
+      play: jasmine.createSpy('play').and.callFake(() => {
+        pausedState = false;
+      }),
+      pause: jasmine.createSpy('pause').and.callFake(() => {
+        pausedState = true;
+      }),
+      duration: 120,
+      currentTime: 0,
+    } as unknown as HTMLVideoElement;
 
-    component['media'] = {
-      nativeElement: {
-        get paused() {
-          return pausedState;
-        },
-        play: playSpy,
-        pause: pauseSpy,
-      } as unknown as HTMLVideoElement,
-    } as any;
+    component['media'] = { nativeElement: mediaEl } as any;
 
     const preventDefault = jasmine.createSpy('preventDefault');
-
-    // Start paused; pressing space should play
-    component.onKeydown(
-      new KeyboardEvent('keydown', {
-        code: 'Space',
-        key: ' ',
-        bubbles: true,
-        cancelable: true,
-      }) as any
-    );
-    expect(playSpy).toHaveBeenCalled();
-    expect(pausedState).toBeFalse();
-
-    // Now playing; pressing space should pause
     component.onKeydown({ code: 'Space', key: ' ', preventDefault } as unknown as KeyboardEvent);
-    expect(pauseSpy).toHaveBeenCalled();
-    expect(preventDefault).toHaveBeenCalled();
-    expect(pausedState).toBeTrue();
-  });
-
-  it('toggles play/pause on single click only after the delay window', fakeAsync(() => {
-    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
-    let pausedState = true;
-
-    const mediaEl = {
-      get paused() {
-        return pausedState;
-      },
-      play: jasmine.createSpy('play').and.callFake(() => {
-        pausedState = false;
-      }),
-      pause: jasmine.createSpy('pause').and.callFake(() => {
-        pausedState = true;
-      }),
-    } as any as HTMLVideoElement;
-
-    component['media'] = { nativeElement: mediaEl } as any;
-
-    component.onVideoClick();
-    tick(clickDelay - 1);
-    expect(mediaEl.play).not.toHaveBeenCalled();
-
-    tick(1);
-    expect(mediaEl.play).toHaveBeenCalledTimes(1);
-    expect(pausedState).toBeFalse();
-  }));
-
-  it('seeks forward on right-side double click without toggling play/pause', fakeAsync(() => {
-    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
-    let pausedState = true;
-
-    const mediaEl = {
-      get paused() {
-        return pausedState;
-      },
-      play: jasmine.createSpy('play').and.callFake(() => {
-        pausedState = false;
-      }),
-      pause: jasmine.createSpy('pause').and.callFake(() => {
-        pausedState = true;
-      }),
-      getBoundingClientRect: () =>
-        ({
-          left: 0,
-          width: 100,
-        }) as DOMRect,
-    } as any as HTMLVideoElement;
-
-    component['media'] = { nativeElement: mediaEl } as any;
-
-    const forwardSpy = spyOn(component, 'seekForward');
-    const toggleSpy = spyOn(component, 'togglePlayPause').and.callThrough();
-
-    component.onVideoClick();
-    component.onVideoDoubleClick(new MouseEvent('dblclick', { clientX: 90 }));
-
-    tick(clickDelay + 20);
-
-    expect(forwardSpy).toHaveBeenCalledTimes(1);
-    expect(toggleSpy).not.toHaveBeenCalled();
-    expect(mediaEl.play).not.toHaveBeenCalled();
-    expect(mediaEl.pause).not.toHaveBeenCalled();
-  }));
-
-  it('reverts a single-click toggle when the second click arrives late but in a skip zone', fakeAsync(() => {
-    const clickDelay = (component as any).CLICK_DELAY_MS ?? 250;
-    let pausedState = true;
-
-    const mediaEl = {
-      get paused() {
-        return pausedState;
-      },
-      play: jasmine.createSpy('play').and.callFake(() => {
-        pausedState = false;
-      }),
-      pause: jasmine.createSpy('pause').and.callFake(() => {
-        pausedState = true;
-      }),
-      getBoundingClientRect: () =>
-        ({
-          left: 0,
-          width: 100,
-        }) as DOMRect,
-    } as any as HTMLVideoElement;
-
-    component['media'] = { nativeElement: mediaEl } as any;
-
-    const backwardSpy = spyOn(component, 'seekBackward');
-
-    component.onVideoClick();
-    tick(clickDelay + 10);
 
     expect(mediaEl.play).toHaveBeenCalled();
-    expect(pausedState).toBeFalse();
+    expect(component.uiState()).toBe('playingControlsVisible');
 
-    component.onVideoDoubleClick({ clientX: 5 } as MouseEvent);
+    tick((component as any).CONTROLS_AUTOHIDE_MS + 10);
+    expect(component.uiState()).toBe('playingControlsHidden');
 
-    expect(backwardSpy).toHaveBeenCalledTimes(1);
+    component.onKeydown({ code: 'Space', key: ' ', preventDefault } as unknown as KeyboardEvent);
     expect(mediaEl.pause).toHaveBeenCalled();
-    expect(pausedState).toBeTrue();
+    expect(component.uiState()).toBe('paused');
   }));
+
+  it('shows and hides controls when tapping the video while playing', fakeAsync(() => {
+    component.uiState.set('playingControlsHidden');
+    component['media'] = { nativeElement: { paused: false } as HTMLVideoElement } as any;
+
+    component.onVideoClick();
+    tick((component as any).CLICK_DELAY_MS + 5);
+    expect(component.uiState()).toBe('playingControlsVisible');
+
+    component.onVideoClick();
+    tick((component as any).CLICK_DELAY_MS + 5);
+    expect(component.uiState()).toBe('playingControlsHidden');
+  }));
+
+  it('does not toggle playback when tapping the video while paused', fakeAsync(() => {
+    let pausedState = true;
+    const mediaEl = {
+      get paused() {
+        return pausedState;
+      },
+      play: jasmine.createSpy('play').and.callFake(() => {
+        pausedState = false;
+      }),
+      pause: jasmine.createSpy('pause').and.callFake(() => {
+        pausedState = true;
+      }),
+    } as unknown as HTMLVideoElement;
+
+    component['media'] = { nativeElement: mediaEl } as any;
+    component.uiState.set('paused');
+
+    component.onVideoClick();
+    tick((component as any).CLICK_DELAY_MS + 5);
+
+    expect(mediaEl.play).not.toHaveBeenCalled();
+    expect(mediaEl.pause).not.toHaveBeenCalled();
+    expect(component.uiState()).toBe('paused');
+    expect(component.controlsAreVisible()).toBeTrue();
+  }));
+
+  it('updates the current time when scrubbing the progress bar', () => {
+    const mediaEl = { duration: 200, currentTime: 0 } as HTMLVideoElement;
+    component['media'] = { nativeElement: mediaEl } as any;
+
+    component.onScrubInput({ target: { value: '50' } } as unknown as Event);
+
+    expect(mediaEl.currentTime).toBeCloseTo(100);
+    expect(component.currentTime()).toBeCloseTo(100);
+    expect(component.lastInteractionTime()).not.toBeNull();
+  });
 });

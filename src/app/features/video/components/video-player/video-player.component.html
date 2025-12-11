@@ -5,151 +5,366 @@
   (dragleave)="onDragLeave($event)"
   (drop)="onDrop($event)"
 >
-      <input
-        #filePicker
-        type="file"
-        accept="video/*"
-        class="hidden"
-        (change)="onFileSelected($event)"
-      />
+  <input
+    #filePicker
+    type="file"
+    accept="video/*"
+    class="hidden"
+    (change)="onFileSelected($event)"
+  />
 
-      <div class="relative">
-        @let currentUrl = effectiveVideoUrl();
-        @if (currentUrl) {
-          <vg-player class="block overflow-hidden rounded-xl border border-slate-800 bg-black shadow-lg">
-            <video
-              #media
-              [vgMedia]="$any(media)"
-              [src]="currentUrl"
-              id="videogular-player"
-              preload="auto"
-              crossorigin
-              class="h-full w-full cursor-pointer bg-black"
-              (click)="onVideoClick()"
-              (dblclick)="onVideoDoubleClick($event)"
-            ></video>
+  <div class="relative">
+    @let currentUrl = effectiveVideoUrl(); @if (currentUrl) {
+    <div
+      #playerContainer
+      class="relative block overflow-hidden rounded-xl border border-slate-800 bg-black shadow-lg aspect-video max-h-full"
+      [style.maxHeight]="playerMaxHeight"
+      (mousemove)="onUserInteraction()"
+      (touchstart)="onUserInteraction()"
+      (mouseenter)="onPointerEnterPlayer()"
+      (mouseleave)="onPointerLeavePlayer()"
+    >
+      <vg-player class="h-full w-full max-h-full">
+        <video
+          #media
+          [vgMedia]="$any(media)"
+          [src]="currentUrl"
+          id="videogular-player"
+          preload="auto"
+          crossorigin
+          class="h-full w-full max-h-full cursor-pointer bg-black object-contain"
+          (click)="onVideoClick()"
+          (dblclick)="onVideoDoubleClick($event)"
+          (play)="onMediaPlay()"
+          (pause)="onMediaPause()"
+          (ended)="onMediaEnded()"
+          (timeupdate)="onTimeUpdate()"
+          (loadedmetadata)="onMetadataLoaded()"
+        ></video>
 
-            <vg-overlay-play></vg-overlay-play>
-            <vg-buffering></vg-buffering>
+        <vg-buffering></vg-buffering>
 
-            @for (overlay of seekOverlayList(); track overlay.token) {
-              <div class="skip-overlay skip-overlay--active">
-                @if (overlay.direction === 'backward') {
-                  <button
-                    type="button"
-                    class="skip-overlay__badge skip-overlay__badge--back skip-overlay__badge--active"
-                    (click)="seekBackward()"
-                  >
-                    <div class="skip-overlay__text">
-                      <span class="skip-overlay__label">-10</span>
-                    </div>
-                  </button>
-                }
-                @if (overlay.direction === 'forward') {
-                  <button
-                    type="button"
-                    class="skip-overlay__badge skip-overlay__badge--forward skip-overlay__badge--active"
-                    (click)="seekForward()"
-                  >
-                    <div class="skip-overlay__text">
-                      <span class="skip-overlay__label">+10</span>
-                    </div>
-                  </button>
-                }
-              </div>
-            }
+        @for (overlay of seekOverlayList(); track overlay.token) {
+        <div class="skip-overlay skip-overlay--active">
+          @switch(overlay.direction){ @case('backward') {<button
+            type="button"
+            class="skip-overlay__badge skip-overlay__badge--back"
+            [ngClass]="{
+              'skip-overlay__badge--active': overlay.direction === 'backward'
+            }"
+            (click)="seekBackward()"
+          >
+            <div class="skip-overlay__text">
+              <span class="skip-overlay__label">-10</span>
+            </div></button
+          >} @case('forward') {<button
+            type="button"
+            class="skip-overlay__badge skip-overlay__badge--forward"
+            [ngClass]="{
+              'skip-overlay__badge--active': overlay.direction === 'forward'
+            }"
+            (click)="seekForward()"
+          >
+            <div class="skip-overlay__text">
+              <span class="skip-overlay__label">+10</span>
+            </div></button
+          >} }
+        </div>
+        }
 
-            <vg-controls
-              vgFor="videogular-player"
-              [vgAutohide]="true"
-              [vgAutohideTime]="2"
-              class="flex flex-wrap items-center gap-2 bg-slate-950/80 px-3 text-slate-100"
-            >
-              <vg-play-pause vgFor="videogular-player"></vg-play-pause>
-
-              <vg-time-display
-                vgFor="videogular-player"
-                vgProperty="current"
-                vgFormat="mm:ss"
-              ></vg-time-display>
-
-              <vg-scrub-bar vgFor="videogular-player" class="flex-1">
-                <vg-scrub-bar-current-time
-                  class="bg-sky-500"
-                ></vg-scrub-bar-current-time>
-                <vg-scrub-bar-buffering-time
-                  class="bg-slate-500/40"
-                ></vg-scrub-bar-buffering-time>
-              </vg-scrub-bar>
-
-              <vg-time-display
-                vgFor="videogular-player"
-                vgProperty="left"
-                vgFormat="mm:ss"
-              ></vg-time-display>
-
-              <vg-volume vgFor="videogular-player" class="min-w-24"></vg-volume>
-              <vg-fullscreen vgFor="videogular-player"></vg-fullscreen>
-            </vg-controls>
-
-            <div class="player-actions player-actions--left">
-              <button
-                type="button"
-                class="action-btn"
-                [attr.aria-label]="media?.muted ? 'Unmute' : 'Mute'"
-                [title]="media?.muted ? 'Unmute' : 'Mute'"
-                (click)="toggleMute()"
-              >
-                @if (media?.muted) {
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                    <path d="M4 9v6h3.5L12 18.5V5.5L7.5 9H4Z"></path>
-                    <path d="m16.95 7.05-1.41 1.41L17.09 10l-1.55 1.54 1.41 1.41L18.5 11.4l1.55 1.55 1.41-1.41L19.91 10l1.55-1.54-1.41-1.41L18.5 8.6l-1.55-1.55Z"></path>
-                  </svg>
-                } @else {
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                    <path d="M4 9v6h3.5L12 18.5V5.5L7.5 9H4Z"></path>
-                    <path d="M16.5 8.25a4.75 4.75 0 0 1 0 7.5l-1.06-1.06a3.25 3.25 0 0 0 0-5.38l1.06-1.06Z"></path>
-                    <path d="M14.25 10.5a2.5 2.5 0 0 1 0 3.96l-1.04-1.04a1 1 0 0 0 0-1.88l1.04-1.04Z"></path>
-                  </svg>
-                }
-              </button>
-            </div>
-
-            <div class="player-actions player-actions--right">
-              <button
-                type="button"
-                class="action-btn"
-                aria-label="Upload another video"
-                title="Upload another video"
-                (click)="filePicker.click()"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                  <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </button>
-              <button
-                type="button"
-              class="action-btn action-btn--danger"
-              aria-label="Remove video"
-              title="Remove video"
-              (click)="removeVideo()"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                  <path d="M9.5 4.5A1.5 1.5 0 0 0 8 6v1H5.5a.75.75 0 0 0 0 1.5h13a.75.75 0 0 0 0-1.5H16V6a1.5 1.5 0 0 0-1.5-1.5h-5Zm4 1.5v1h-3V6a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5ZM7.75 10a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 7.75 10Zm4.25.75a.75.75 0 1 0-1.5 0v6.5a.75.75 0 1 0 1.5 0v-6.5Zm3.25-.75a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75ZM9 21a2 2 0 0 1-2-2V9.5h10V19a2 2 0 0 1-2 2H9Z"></path>
-                </svg>
-              </button>
-            </div>
-          </vg-player>
-        } @else {
+        <!-- Center overlay: Play when paused, Pause when playing with visible controls -->
+        <div
+          class="absolute inset-0 z-10 flex items-center justify-center transition-all pointer-events-none"
+          [ngClass]="{
+            'opacity-100': showCenterButton(),
+            'opacity-0': !showCenterButton()
+          }"
+        >
+          <div
+            class="absolute inset-0 bg-black/10 transition-opacity"
+            [ngClass]="{
+              'opacity-100 duration-200 ease-out': showCenterButton(),
+              'opacity-0 duration-150 ease-in': !showCenterButton()
+            }"
+          ></div>
           <button
             type="button"
-            class="flex aspect-[16/9] min-h-[320px] w-full items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-900/60 text-center text-slate-400 transition hover:-translate-y-0.5 hover:border-sky-500 hover:text-slate-200"
-            [class.border-sky-500]="isDragOver()"
-            [class.text-slate-200]="isDragOver()"
-            (click)="filePicker.click()"
+            class="relative z-10 flex items-center gap-3 rounded-full bg-white/10 px-6 py-4 text-white shadow-2xl ring-1 ring-white/30 backdrop-blur transition-all"
+            [ngClass]="{
+              'opacity-100 scale-100 duration-200 ease-out pointer-events-auto':
+                showCenterButton(),
+              'opacity-0 scale-95 duration-150 ease-in pointer-events-none':
+                !showCenterButton()
+            }"
+            (click)="togglePlayPause(); $event.stopPropagation()"
+            [attr.aria-label]="isPaused() ? 'Play' : 'Pause video'"
           >
-            Drag & drop a video here, or click to upload
+            @if (isPaused()) {
+            <!-- Play icon -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="h-7 w-7"
+            >
+              <path d="M8.5 5.75v12.5L18 12 8.5 5.75Z"></path>
+            </svg>
+            } @else {
+            <!-- Pause icon: two vertical bars -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="h-7 w-7"
+            >
+              <path
+                d="M7.75 5.75h2.5v12.5h-2.5V5.75Zm6 0h2.5v12.5h-2.5V5.75Z"
+              ></path>
+            </svg>
+            }
           </button>
-        }
-      </div>
+        </div>
+
+        <!-- Overlay with gradient + top/bottom bars -->
+        <div
+          class="absolute inset-0 z-20 flex flex-col justify-between pointer-events-none"
+          [ngClass]="{
+            'opacity-0 duration-300 ease-in': !controlsAreVisible(),
+            'opacity-100 duration-200 ease-out': controlsAreVisible()
+          }"
+        >
+          <div
+            class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-black/70 transition-opacity pointer-events-none"
+            [ngClass]="{
+              'opacity-100 duration-200 ease-out': controlsAreVisible(),
+              'opacity-0 duration-300 ease-in': !controlsAreVisible()
+            }"
+            aria-hidden="true"
+          ></div>
+
+          <div class="relative flex h-full flex-col justify-between">
+            <!-- TOP BAR -->
+            <div
+              class="flex items-center justify-between px-4 pt-3 transition-all"
+              [ngClass]="{
+                'opacity-100 translate-y-0 duration-200 ease-out pointer-events-auto':
+                  controlsAreVisible(),
+                'opacity-0 -translate-y-[10px] duration-300 ease-in pointer-events-none':
+                  !controlsAreVisible()
+              }"
+            >
+              <div class="flex items-center gap-2">
+                <div class="mx-1 truncate text-sm font-medium text-white/90">
+                  VideoLab
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+                  aria-label="Upload another video"
+                  title="Upload another video"
+                  (click)="filePicker.click()"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    class="h-5 w-5"
+                  >
+                    <path
+                      d="M12 5v14m7-7H5"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-full bg-red-500/80 p-2 text-white transition hover:bg-red-500"
+                  aria-label="Remove video"
+                  title="Remove video"
+                  (click)="removeVideo()"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="h-5 w-5"
+                  >
+                    <path
+                      d="M9.5 4.5A1.5 1.5 0 0 0 8 6v1H5.5a.75.75 0 0 0 0 1.5h13a.75.75 0 0 0 0-1.5H16V6a1.5 1.5 0 0 0-1.5-1.5h-5Zm4 1.5v1h-3V6a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5ZM7.75 10a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 7.75 10Zm4.25.75a.75.75 0 1 0-1.5 0v6.5a.75.75 0 1 0 1.5 0v-6.5Zm3.25-.75a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75ZM9 21a2 2 0 0 1-2-2V9.5h10V19a2 2 0 0 1-2 2H9Z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- BOTTOM BAR -->
+            <div
+              class="flex flex-col gap-3 px-4 pb-4 transition-all"
+              [ngClass]="{
+                'opacity-100 translate-y-0 duration-200 ease-out pointer-events-auto':
+                  controlsAreVisible(),
+                'opacity-0 translate-y-[10px] duration-300 ease-in pointer-events-none':
+                  !controlsAreVisible()
+              }"
+            >
+              <div class="flex items-center gap-3 text-xs text-white/80">
+                <span class="tabular-nums">{{
+                  formatTime(currentTime())
+                }}</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  [value]="progressPercent()"
+                  (input)="onScrubInput($event)"
+                  class="h-1 flex-1 cursor-pointer accent-sky-400"
+                />
+                <span class="tabular-nums">{{ formatTime(duration()) }}</span>
+              </div>
+
+              <div class="flex items-center justify-between text-white">
+                <div class="flex items-center gap-3">
+                  <!-- Small play/pause -->
+                  <button
+                    type="button"
+                    class="rounded-full bg-white/10 p-2 transition hover:bg-white/20"
+                    [attr.aria-label]="isPaused() ? 'Play' : 'Pause'"
+                    (click)="togglePlayPause()"
+                  >
+                    @if (isPaused()) {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="h-5 w-5"
+                    >
+                      <path d="M8.5 5.75v12.5L18 12 8.5 5.75Z"></path>
+                    </svg>
+                    } @else {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="h-5 w-5"
+                    >
+                      <path
+                        d="M7.75 5.75h2.5v12.5h-2.5V5.75Zm6 0h2.5v12.5h-2.5V5.75Z"
+                      ></path>
+                    </svg>
+                    }
+                  </button>
+
+                  <!-- Mute / Unmute -->
+                  <button
+                    type="button"
+                    class="rounded-full bg-white/10 p-2 transition hover:bg-white/20"
+                    [attr.aria-label]="media?.muted ? 'Unmute' : 'Mute'"
+                    [title]="media?.muted ? 'Unmute' : 'Mute'"
+                    (click)="toggleMute()"
+                  >
+                    @if (media?.muted) {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="h-5 w-5"
+                    >
+                      <path d="M4 9v6h3.5L12 18.5V5.5L7.5 9H4Z"></path>
+                      <path
+                        d="m16.95 7.05-1.41 1.41L17.09 10l-1.55 1.54 1.41 1.41L18.5 11.4l1.55 1.55 1.41-1.41L19.91 10l1.55-1.54-1.41-1.41L18.5 8.6l-1.55-1.55Z"
+                      ></path>
+                    </svg>
+                    } @else {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="h-5 w-5"
+                    >
+                      <path d="M4 9v6h3.5L12 18.5V5.5L7.5 9H4Z"></path>
+                      <path
+                        d="M16.5 8.25a4.75 4.75 0 0 1 0 7.5l-1.06-1.06a3.25 3.25 0 0 0 0-5.38l1.06-1.06Z"
+                      ></path>
+                      <path
+                        d="M14.25 10.5a2.5 2.5 0 0 1 0 3.96l-1.04-1.04a1 1 0 0 0 0-1.88l1.04-1.04Z"
+                      ></path>
+                    </svg>
+                    }
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <!-- Fullscreen toggle -->
+                  <button
+                    type="button"
+                    class="rounded-full bg-white/10 p-2 transition hover:bg-white/20"
+                    [attr.aria-label]="
+                      isFullscreen() ? 'Exit fullscreen' : 'Enter fullscreen'
+                    "
+                    [title]="
+                      isFullscreen() ? 'Exit fullscreen' : 'Enter fullscreen'
+                    "
+                    (click)="toggleFullscreen()"
+                  >
+                    @if (isFullscreen()) {
+                    <!-- Exit fullscreen icon -->
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      class="h-5 w-5"
+                    >
+                      <path
+                        d="M9 9H5V5M15 9h4V5M9 15H5v4M15 15h4v4"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    } @else {
+                    <!-- Enter fullscreen icon -->
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      class="h-5 w-5"
+                    >
+                      <path
+                        d="M9 5H5v4M15 5h4v4M9 19H5v-4M15 19h4v-4"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </vg-player>
     </div>
+    } @else {
+    <button
+      type="button"
+      class="flex aspect-[16/9] min-h-[320px] w-full items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-900/60 text-center text-slate-400 transition hover:-translate-y-0.5 hover:border-sky-500 hover:text-slate-200"
+      [style.maxHeight]="playerMaxHeight"
+      [class.border-sky-500]="isDragOver()"
+      [class.text-slate-200]="isDragOver()"
+      (click)="filePicker.click()"
+    >
+      Drag & drop a video here, or click to upload
+    </button>
+    }
+  </div>
+</div>
